@@ -1,1 +1,2 @@
-# python_labs_kunasyl
+# EXTRA python laboratories
+## Group 1 - Tamabayeva Kunasyl
