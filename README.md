@@ -1,2 +1,2 @@
-# EXTRA python laboratories
-## Group 1 - Tamabayeva Kunasyl
+## EXTRA python laboratories
+### Group 1 - Tamabayeva Kunasyl
