@@ -9,3 +9,4 @@ CREATE TABLE items (
     not_date TEXT NOT NULL
 );
 
+-- delete from items;

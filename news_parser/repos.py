@@ -68,7 +68,6 @@ class Repos:
             '''
             cursor.execute(select_query, (resource_name,))
             records = cursor.fetchall()
-            # print(f"{len(records)} were fetched")
             cursor.close()
 
         except sqlite3.Error as error:
