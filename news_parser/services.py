@@ -52,10 +52,7 @@ class Services:
     
 
     def get_urls_from_base_url(self, url_template: str, max_page_number=10):
-        '''Get urls from base url:
-        - resource_url - resource url tuple containing base url, url_template
-        - max_page_number - max pagination
-        '''
+        '''Get urls from base url'''
 
         urls = []
 
@@ -79,7 +76,10 @@ class Services:
     
 
     def parse_data_and_insert(self, resource: dict, max_page_number=10):
-        '''Parse all urls from news website and insert into the table items'''
+        '''Parse all urls from news website and insert into the table items
+        - resource - resource dictionary contains infromation about a website
+        - max_page_number - max pagination (how much pages of the website we want to parse)
+        '''
         urls = self.get_urls_from_base_url(resource['url_template'], max_page_number)
 
         url_id = 1
@@ -91,10 +91,7 @@ class Services:
 
 
     def parse_url_page(self, url: str, resource: dict, url_id: int):
-        '''Parse news from a given url page:
-        - resource - resource dictionary contains infromation about a website
-        - max_page_number - max pagination (how much pages of the website we want to parse)
-        '''
+        '''Parse news from a given url page'''
 
         flats = []
         resource_id = self.get_resource_id(resource['url'])[0][0]
