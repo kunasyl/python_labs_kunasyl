@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup as bs
 from datetime import datetime
 import time
 from urllib.request import urlopen
+from time import sleep
+from random import randint
 
 from repos import Repos
 
@@ -49,25 +51,18 @@ class Services:
             return False
     
 
-    def get_urls_from_base_url(self, resource_url: tuple, max_page_number=50):
+    def get_urls_from_base_url(self, url_template: str, max_page_number=10):
         '''Get urls from base url:
         - resource_url - resource url tuple containing base url, url_template
         - max_page_number - max pagination
         '''
 
         urls = []
-        base_url, url_template = resource_url
 
-        if self.check_url_connection(base_url):
-            try:
-                for page_number in range(max_page_number):
-                    url = url_template.format(page_number=page_number)
-                    if url not in urls:
-                        urls.append(url)
-            except:
-                return f"Error"
-        else:
-            return f"Connection error"
+        for page_number in range(1, max_page_number+1):
+            url = url_template.format(page_number=page_number)
+            if url not in urls:
+                urls.append(url)
 
         return urls
 
@@ -81,77 +76,88 @@ class Services:
             article_datetime = datetime.strptime(article_datetime, '%a, %d %b %Y %X %Z')
 
         return article_datetime
+    
+
+    def parse_data_and_insert(self, resource: dict, max_page_number=10):
+        '''Parse all urls from news website and insert into the table items'''
+        urls = self.get_urls_from_base_url(resource['url_template'], max_page_number)
+
+        url_id = 1
+        for url in urls:
+            url_articles = self.parse_url_page(url, resource, url_id)
+            print('Expected insert data count: ', len(url_articles))
+            self.insert_data_to_items(url_articles)
+            url_id += 1
 
 
-    def parser(self, resource: dict, max_page_number=50):
-        '''Parse news from a given website:
+    def parse_url_page(self, url: str, resource: dict, url_id: int):
+        '''Parse news from a given url page:
         - resource - resource dictionary contains infromation about a website
         - max_page_number - max pagination (how much pages of the website we want to parse)
         '''
 
         flats = []
         resource_id = self.get_resource_id(resource['url'])[0][0]
-        urls = self.get_urls_from_base_url(
-            resource_url=(resource['url'], resource['url_template']),
-            max_page_number=max_page_number
-        )
         session = requests.Session()
 
-        for url in urls:
-            request = session.get(url, headers=self.headers)
-            soup = bs(request.content, 'lxml')
-            divs = soup.find_all(
-                name=('div' or 'a'),
-                attrs={'class': resource['articles_class']}
+        request = session.get(url, headers=self.headers)
+        soup = bs(request.content, 'lxml')
+        divs = soup.find_all(
+            name=('div' or 'a'),
+            attrs={'class': resource['articles_class']}
+        )
+        
+        div_id = 1
+        for div in divs:
+            '''ID'''
+            article_id = int(f"{resource_id}{url_id:02}{div_id:02}")
+
+            '''LINK'''
+            article_url = div.find(
+                name='a', 
+                attrs={'class': resource['article_url']}
+            )['href']
+            article_abs_url = f"{resource['url']}{article_url}"
+            print(f"{article_abs_url} with id: {article_id}")
+
+            '''TITLE'''
+            title = div.find(
+                name=('a' or 'div'), 
+                attrs={'class': resource['article_title']}
             )
-            
-            div_id = 1
-            for div in divs:
-                '''ID'''
-                article_id = int(f"{resource_id}{div_id:04}")
+            if not title:
+                title = div.find('div', attrs={'class': 'title'})
+            title = title.text.strip()
 
-                '''LINK'''
-                article_url = div.find(
-                    name='a', 
-                    attrs={'class': resource['article_url']}
-                )['href']
-                article_abs_url = f"{resource['url']}{article_url}"
+            '''CONTENT'''
+            if not self.check_url_connection(article_abs_url):
+                continue
+            request = session.get(article_abs_url, headers=self.headers)
+            soup = bs(request.content, 'lxml')
+            content = soup.find(
+                name=('article', 'div'),
+                attrs={'class': resource['article_content']}
+            ).find_all('p')
+            content_text = ""
+            for content_p in content:
+                content_text += content_p.text.strip()
 
-                '''TITLE'''
-                title = div.find(
-                    name=('a' or 'div'), 
-                    attrs={'class': resource['article_title']}
-                )
-                if not title:
-                    title = div.find('div', attrs={'class': 'title'})
-                title = title.text.strip()
+            '''DATE'''
+            article_datetime = self.get_article_date(article_abs_url)
 
-                '''CONTENT'''
-                request = session.get(article_abs_url, headers=self.headers)
-                soup = bs(request.content, 'lxml')
-                content = soup.find(
-                    name=('article', 'div'),
-                    attrs={'class': resource['article_content']}
-                ).find_all('p')
-                content_text = ""
-                for content_p in content:
-                    content_text += content_p.text.strip()
+            flats.append((
+                article_id,                                       # id
+                resource_id,                                      # res_id
+                article_abs_url,                                  # link
+                title,                                            # title
+                content_text,                                     # content
+                self.convert_date_to_unix(article_datetime),      # nd_date
+                self.convert_date_to_unix(datetime.now()),        # s_date
+                datetime.strftime(article_datetime, '%Y-%m-%d')   # not_date
+            ))
 
-                '''DATE'''
-                article_datetime = self.get_article_date(article_abs_url)
-
-                flats.append((
-                    article_id,                                       # id
-                    resource_id,                                      # res_id
-                    article_abs_url,                                  # link
-                    title,                                            # title
-                    content_text,                                     # content
-                    self.convert_date_to_unix(article_datetime),      # nd_date
-                    self.convert_date_to_unix(datetime.now()),        # s_date
-                    datetime.strftime(article_datetime, '%Y-%m-%d')   # not_date
-                ))
-
-                div_id += 1
+            div_id += 1
+            sleep(randint(5,10))
 
         return flats
 
@@ -160,8 +166,8 @@ class Services:
         return self.repos.get_resource_id(resource_name)
 
 
-    def insert_data_to_table(self, data: list):
-        self.repos.insert_data_to_table(data)
+    def insert_data_to_items(self, data: list):
+        self.repos.insert_data_to_items(data)
         
 
     @staticmethod

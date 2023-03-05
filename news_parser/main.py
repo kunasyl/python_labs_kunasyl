@@ -7,8 +7,7 @@ def init():
     resources = services.get_resources()
     
     for resource in resources:
-        resource_articles = services.parser(resource=resource, max_page_number=1)
-        services.insert_data_to_table(resource_articles)
+        services.parse_data_and_insert(resource=resource, max_page_number=10)
 
 
 if __name__ == "__main__":

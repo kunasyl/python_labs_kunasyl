@@ -8,9 +8,6 @@ CREATE TABLE resources (
 	bottom_tag TEXT NOT NULL   -- content
 );
 
--- DELETE FROM resources;
--- drop table resources;
-
 
 INSERT INTO resources
 VALUES 
@@ -42,6 +39,3 @@ VALUES
 		"article__body"
 	)
 ;
-
--- delete from resources;
-

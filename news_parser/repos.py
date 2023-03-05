@@ -26,33 +26,27 @@ class Repos:
                 return records
             
     
-    def insert_data_to_table(self, data: list):
+    def insert_data_to_items(self, data: list):
 
         try:
             conn = sqlite3.connect(self.db_path)
             cur = conn.cursor()
-            sql = '''INSERT INTO items(
-                id,
-                res_id,
-                link,
-                title,
-                content,
-                nd_date,
-                s_date,
-                not_date
-              )
-              VALUES(?,?,?,?,?,?,?,?);'''
+            sql = '''INSERT INTO items
+                     VALUES(?,?,?,?,?,?,?,?)'''
             cur.executemany(sql, data)
             conn.commit()
-            conn.close()
+            
+            print(f"ROWCOUNT: {cur.rowcount}")
+            conn.commit()
+            cur.close()
 
         except sqlite3.Error as error:
-            return f"Error while connecting to sqlite: {error}"
+            print(f"Error while connecting to sqlite: {error}")
 
         finally:
             if conn:
                 conn.close()
-                return cur.lastrowid
+                print("The SQLite connection is closed")
             
 
     def get_resource_id(self, resource_name: str):
